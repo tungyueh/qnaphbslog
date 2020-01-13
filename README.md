@@ -2,6 +2,8 @@
 
 ## Usage
 
-python -m qnaphbslog -p \<log path\>
+### Help
+python -m qnaphbslog -h
 
-Ex: python -m qnaphbslog -p HBS-diagnosis-report/system/Two-way Sync 1/log
+### Anaylze sync file action
+python -m qnaphbslog \<HBS diagnosis report path\> --sync-history

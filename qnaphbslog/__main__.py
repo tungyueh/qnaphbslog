@@ -9,11 +9,25 @@ SYNC_HISTORY_LOG_FILE_NAME = 'syncengine-history.log'
 
 def main():
     parser = argparse.ArgumentParser(description='Analyze the QNAP HBS log')
-    parser.add_argument('-p', help='Path of HBS diagnosis report log path')
+    parser.add_argument('hbs_log', help='Path of HBS diagnosis report')
+    parser.add_argument('--sync-history', action='store_true',
+                        dest='sync_history', help='Analyze sync file action')
     args = parser.parse_args()
 
-    log_path = args.p
+    hbs_log = args.hbs_log
 
+    if args.sync_history:
+        for root, dirs, files in os.walk(hbs_log):
+            if not root.endswith('system'):
+                continue
+            for dir in dirs:
+                job_path = os.path.join(root, dir)
+                job_log_path = os.path.join(job_path, 'log')
+                print(f'Job Name: {dir}')
+                analyze_sync_history(job_log_path)
+
+
+def analyze_sync_history(log_path):
     if not os.path.exists(log_path):
         print(f'{log_path} not exists')
         return
