@@ -2,7 +2,7 @@ from datetime import datetime
 from operator import attrgetter
 
 
-class HistoryRecord:
+class SyncFileHistoryRecord:
     def __init__(self,
                  name,
                  timestamp,
@@ -17,11 +17,11 @@ class HistoryRecord:
         self.is_dir = is_dir
 
 
-class JobHistory:
+class SyncFileHistory:
     def __init__(self):
         self._history = list()
 
-    def add_history(self, history_record: HistoryRecord):
+    def add_history(self, history_record: SyncFileHistoryRecord):
         self._history.append(history_record)
 
     def start_time(self):

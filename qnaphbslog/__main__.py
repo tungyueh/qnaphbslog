@@ -2,7 +2,7 @@ import argparse
 import os
 import json
 
-from .job_history import HistoryRecord, JobHistory
+from .sync_file_history import SyncFileHistoryRecord, SyncFileHistory
 
 SYNC_HISTORY_LOG_FILE_NAME = 'syncengine-history.log'
 
@@ -53,17 +53,17 @@ def get_log_paths(log_path, log_name):
     return paths
 
 
-def get_job_history(history_paths) -> JobHistory:
-    job_history = JobHistory()
+def get_job_history(history_paths) -> SyncFileHistory:
+    job_history = SyncFileHistory()
     for p in history_paths:
         with open(p, 'r') as fp:
             for line in fp:
                 h = json.loads(line)
-                history_record = HistoryRecord(name=h['name'],
-                                               timestamp=h['timestamp'],
-                                               action=h['action'],
-                                               exception=h['exception'],
-                                               is_dir=h['is_dir'])
+                history_record = SyncFileHistoryRecord(name=h['name'],
+                                                       timestamp=h['timestamp'],
+                                                       action=h['action'],
+                                                       exception=h['exception'],
+                                                       is_dir=h['is_dir'])
                 job_history.add_history(history_record)
     return job_history
 
