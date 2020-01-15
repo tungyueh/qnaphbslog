@@ -2,9 +2,13 @@ import argparse
 import os
 import json
 
-from .hbs import HybridBackupSync, AccountList
+from .hbs import HybridBackupSync
 from .account import Account
 from .job import Job
+from .job_history import JobHistory
+from .job_history_record import (get_upload_bytes_per_second_key,
+                                 get_download_bytes_per_second_key,
+                                 JobHistoryRecord)
 from .sync_file_history import SyncFileHistoryRecord, SyncFileHistory
 
 SYNC_HISTORY_LOG_FILE_NAME = 'syncengine-history.log'
@@ -15,6 +19,8 @@ def main():
     parser.add_argument('hbs_log', help='Path of HBS diagnosis report')
     parser.add_argument('--hbs-summary', action='store_true',
                         dest='hbs_summary', help='Print HBS summary')
+    parser.add_argument('--job-history', action='store_true',
+                        dest='job_history', help='Print Job History')
     parser.add_argument('--sync-history', action='store_true',
                         dest='sync_history', help='Analyze sync file action')
     args = parser.parse_args()
@@ -31,6 +37,28 @@ def main():
         jobs = get_jobs(hbs_log_path)
         hbs = HybridBackupSync(hbs_version, cc3_version, accounts, jobs)
         print_hbs_summary(hbs)
+
+    if args.job_history:
+        jobs = get_jobs(hbs_log_path)
+        for job in jobs:
+            job_history_file = get_job_history_file(hbs_log_path, job.name)
+            with open(job_history_file, 'r') as fp:
+                content = fp.read()
+
+            job_history = JobHistory()
+            upload_key = get_upload_bytes_per_second_key(job.job_type)
+            download_key = get_download_bytes_per_second_key(job.job_type)
+            for h in json.loads(content)['history']:
+                record = JobHistoryRecord(start_time=h['start_time'],
+                                          elapse_time=h.get('elapse_time'),
+                                          stop_time=h['stop_time'],
+                                          status=h['status'],
+                                          upload_bytes_per_second=h.get(upload_key),
+                                          download_bytes_per_second=h.get(download_key)
+                                          )
+                job_history.add(record)
+
+            print_job_history(job.name, job_history)
 
     if args.sync_history:
         jobs = get_jobs(hbs_log_path)
@@ -106,6 +134,25 @@ def print_hbs_summary(hbs: HybridBackupSync):
         for job in hbs.get_job_by_type(job_type):
             account = hbs.get_account(job.account_id)
             print(f'  name: {job.name}, provider type: {account.provider_type}')
+
+
+def get_job_history_file(hbs_log_path, job_name):
+    for root, dirs, files in os.walk(hbs_log_path):
+        if not root.endswith('system'):
+            continue
+        for dir in dirs:
+            if dir == job_name:
+                job_path = os.path.join(root, dir)
+                job_history_path = os.path.join(job_path, 'job_history.json')
+                return job_history_path
+
+
+def print_job_history(job_name, job_history):
+    print(f'Job Name: {job_name}, '
+          f'total run {job_history.total_run_times()} times, '
+          f'complete: {job_history.total_complete_times()}, '
+          f'fail: {job_history.total_fail_times()}, '
+          f'stopped: {job_history.total_stop_times()}')
 
 
 def get_job_log_path(hbs_log_path, job_name):
