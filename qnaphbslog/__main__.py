@@ -42,6 +42,8 @@ def main():
         jobs = get_jobs(hbs_log_path)
         for job in jobs:
             job_history_file = get_job_history_file(hbs_log_path, job.name)
+            if job_history_file is None:
+                continue
             with open(job_history_file, 'r') as fp:
                 content = fp.read()
 
