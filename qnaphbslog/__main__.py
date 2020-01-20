@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+from collections import Counter
 
 from .hbs import HybridBackupSync
 from .account import Account
@@ -23,6 +24,8 @@ def main():
                         dest='job_history', help='Print Job History')
     parser.add_argument('--sync-history', action='store_true',
                         dest='sync_history', help='Analyze sync file action')
+    parser.add_argument('--task', action='store_true',
+                        dest='task', help='Analyze task')
     args = parser.parse_args()
 
     hbs_log_path = args.hbs_log
@@ -69,6 +72,40 @@ def main():
                 continue
             job_log_path = get_job_log_path(hbs_log_path, job.name)
             print_sync_history(job.name, job_log_path)
+
+    if args.task:
+        jobs = get_jobs(hbs_log_path)
+        for job in jobs:
+            print_task(hbs_log_path, job)
+
+
+def print_task(hbs_log_path, job):
+    task_counter = count_task(hbs_log_path, job)
+    total_tasks = 0
+    for count in task_counter.values():
+        total_tasks += count
+
+    print(job)
+    print(f'  Total submit {total_tasks} tasks')
+    print(f'  Most common task: {task_counter.most_common(3)}')
+
+
+def count_task(hbs_log_path, job):
+    task_counter = Counter()
+    for file in list_job_log_file(hbs_log_path, job.name):
+        with open(file, 'r') as fp:
+            for line in fp:
+                if 'task submitted:' not in line:
+                    continue
+                task_name = get_taks_name(line)
+                task_counter.update({task_name: 1})
+    return task_counter
+
+
+def get_taks_name(line):
+    start = line.find('task submitted: ') + len('task submitted: ')
+    end = line.find('(')
+    return line[start:end]
 
 
 def get_hbs_version(hbs_log_path):
@@ -224,6 +261,15 @@ def print_sync_history_report(job_name, job_history):
         print('Exception summary:')
         for exception in job_history.exception_types():
             print(f'  {exception}: {len(job_history.get_files_by_exception(exception))}')
+
+
+def list_job_log_file(hbs_log_path, job_name):
+    for root, dirs, files in os.walk(hbs_log_path):
+        if not root.endswith(f'{job_name}/log'):
+            continue
+        for file in files:
+            if 'engine.log' in file:
+                yield os.path.join(root, file)
 
 
 if __name__ == '__main__':
