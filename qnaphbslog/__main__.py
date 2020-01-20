@@ -4,7 +4,7 @@ import json
 
 from .hbs import HybridBackupSync
 from .account import Account
-from .job import Job
+from .job import Job, make_job
 from .job_history import JobHistory
 from .job_history_record import (get_upload_bytes_per_second_key,
                                  get_download_bytes_per_second_key,
@@ -106,10 +106,8 @@ def get_jobs(hbs_log_path):
     config = get_config(hbs_log_path)
     jobs = list()
     for j in config['jobs']:
-        if j['_type'] == 'cloud':
-            job = Job(account_id=j['account_id'],
-                      job_type=j['job_type'],
-                      name=j['name'])
+        job = make_job(j)
+        if job:
             jobs.append(job)
     return jobs
 
@@ -135,7 +133,7 @@ def print_hbs_summary(hbs: HybridBackupSync):
         print(f'{job_type} jobs total: {len(hbs.get_job_by_type(job_type))}')
         for job in hbs.get_job_by_type(job_type):
             account = hbs.get_account(job.account_id)
-            print(f'  name: {job.name}, provider type: {account.provider_type}')
+            print(f'  {job} provider type: {account.provider_type}')
 
 
 def get_job_history_file(hbs_log_path, job_name):
