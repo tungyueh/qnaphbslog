@@ -85,9 +85,33 @@ def print_task(hbs_log_path, job):
     for count in task_counter.values():
         total_tasks += count
 
-    print(job)
-    print(f'  Total submit {total_tasks} tasks')
-    print(f'  Most common task: {task_counter.most_common(3)}')
+    file_sizes = get_upload_file_size(hbs_log_path, job)
+    mb = 1024*1024
+    total_upload_files = 0
+    num_file_size_smaller_than_5mb = 0
+    num_file_size_5mb_to_100mb = 0
+    num_file_size_100mb_to_1gb = 0
+    num_file_size_larger_than_1gb = 0
+    for size in file_sizes:
+        total_upload_files += 1
+        if size <= 5*mb:
+            num_file_size_smaller_than_5mb += 1
+        elif size <= 100*mb:
+            num_file_size_5mb_to_100mb += 1
+        elif size <= 1000*mb:
+            num_file_size_100mb_to_1gb += 1
+        else:
+            num_file_size_larger_than_1gb += 1
+
+    print(f'{job}\n'
+          f'  Total submit {total_tasks} tasks\n'
+          f'  Most common task: {task_counter.most_common(3)}\n'
+          f'  Upload {total_upload_files} files\n'
+          f'    ~5MB: {num_file_size_smaller_than_5mb}\n'
+          f'    5MB~100MB: {num_file_size_5mb_to_100mb}\n'
+          f'    100MB~1GB: {num_file_size_100mb_to_1gb}\n'
+          f'    1GB~: {num_file_size_larger_than_1gb}'
+          )
 
 
 def count_task(hbs_log_path, job):
@@ -100,6 +124,25 @@ def count_task(hbs_log_path, job):
                 task_name = get_taks_name(line)
                 task_counter.update({task_name: 1})
     return task_counter
+
+
+def get_upload_file_size(hbs_log_path, job):
+    file_sizes = list()
+    for file in list_job_log_file(hbs_log_path, job.name):
+        with open(file, 'r') as fp:
+            for line in fp:
+                if 'task submitted:' not in line:
+                    continue
+                task_name = get_taks_name(line)
+                if task_name == 'UploadTask':
+                    size = get_upload_size(line)
+                    file_sizes.append(size)
+    return file_sizes
+
+
+def get_upload_size(line):
+    size = int(line[line.find("'size': ") + len("'size': "):].split(',')[0])
+    return size
 
 
 def get_taks_name(line):
