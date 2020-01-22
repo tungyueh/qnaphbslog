@@ -19,6 +19,8 @@ class HybridBackupSync:
         self.jobs = jobs
 
     def get_account(self, account_id):
+        if account_id == '':
+            return Account(_id='', provider_type='local', name='local')
         for account in self.accounts:
             if account.id == account_id:
                 return account
