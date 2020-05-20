@@ -7,12 +7,14 @@ class SyncFileHistoryRecord:
                  name,
                  timestamp,
                  action,
+                 result,
                  exception,
                  is_dir,
                  ):
         self.name = name
         self.timestamp = timestamp
         self.action = action
+        self.result = result
         self.exception = exception
         self.is_dir = is_dir
 
@@ -36,19 +38,29 @@ class SyncFileHistory:
         last_datetime = datetime.utcfromtimestamp(last_history.timestamp)
         return last_datetime
 
+    def total_sync(self, action=None):
+        if action is None:
+            return len(self._history)
+
+        count = 0
+        for h in self._history:
+            if h.action == action:
+                count += 1
+        return count
+
     def total_files(self):
-        files_count = 0
+        names = set()
         for h in self._history:
             if h.is_dir is False:
-                files_count += 1
-        return files_count
+                names.add(h.name)
+        return len(names)
 
     def total_folders(self):
-        folders_count = 0
+        names = set()
         for h in self._history:
             if h.is_dir is True:
-                folders_count += 1
-        return folders_count
+                names.add(h.name)
+        return len(names)
 
     def action_types(self):
         action_types = list()
@@ -66,16 +78,20 @@ class SyncFileHistory:
                 exception_types.append(h.exception)
         return exception_types
 
-    def get_files_by_action(self, action):
-        files = list()
+    def get_files(self, *, action=None, result=None):
+        files = set()
         for h in self._history:
-            if h.action == action:
-                files.append(h.name)
+            if action and action != h.action:
+                continue
+            if result and result != h.result:
+                continue
+            files.add(h.name)
         return files
 
-    def get_files_by_exception(self, exception):
-        files = list()
+    def get_sync(self, exception):
+        synces = []
         for h in self._history:
             if h.exception == exception:
-                files.append(h.name)
-        return files
+                synces.append(h)
+        return synces
+

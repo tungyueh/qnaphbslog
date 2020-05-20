@@ -281,6 +281,7 @@ def get_job_history(history_paths) -> SyncFileHistory:
                 history_record = SyncFileHistoryRecord(name=h['name'],
                                                        timestamp=h['timestamp'],
                                                        action=h['action'],
+                                                       result=h['result'],
                                                        exception=h['exception'],
                                                        is_dir=h['is_dir'])
                 job_history.add_history(history_record)
@@ -288,22 +289,32 @@ def get_job_history(history_paths) -> SyncFileHistory:
 
 
 def print_sync_history_report(job_name, job_history):
+    jh = job_history
     print(f'Job Name: {job_name}')
-    if job_history.total_files() == 0:
+    if jh.total_files() == 0:
         print('No Sync History')
         return
-    print(f'Sync History from {job_history.start_time()} to {job_history.end_time()}')
-    print(f'Total files: {job_history.total_files()}')
-    print(f'Total folders: {job_history.total_folders()}')
-    print('Action summary:')
-    for action in job_history.action_types():
-        print(f'  {len(job_history.get_files_by_action(action))} try to {action}')
-    if len(job_history.exception_types()) == 0:
-        print('No exception')
+    print(f'Sync History from {jh.start_time()} to {jh.end_time()}')
+    print(f'* Total sync: {jh.total_sync()}')
+    print(f'* Total files: {jh.total_files()}')
+    print(f'* Total folders: {jh.total_folders()}')
+    print('\nAction summary:')
+    for action in jh.action_types():
+        sync_count =jh.total_sync(action=action)
+        total_files = jh.get_files(action=action)
+        success_files = jh.get_files(action=action, result='success')
+        fail_files = jh.get_files(action=action, result='fail')
+
+        print(f'* [{action.upper()}] try {sync_count} times, '
+              f'total files: {len(total_files)}, '
+              f'success: {len(success_files)}, '
+              f'fail: {len(fail_files.difference(success_files))}')
+    if len(jh.exception_types()) == 0:
+        print('\nNo exception')
     else:
-        print('Exception summary:')
-        for exception in job_history.exception_types():
-            print(f'  {exception}: {len(job_history.get_files_by_exception(exception))}')
+        print('\nException summary:')
+        for exception in jh.exception_types():
+            print(f'* {exception}: happens {len(jh.get_sync(exception=exception))} times')
 
 
 def list_job_log_file(hbs_log_path, job_name):
