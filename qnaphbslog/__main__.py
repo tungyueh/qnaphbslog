@@ -26,6 +26,10 @@ def main():
                         dest='sync_history', help='Analyze sync file action')
     parser.add_argument('--task', action='store_true',
                         dest='task', help='Analyze task')
+    parser.add_argument('--replace-job-id-with-name-in-server-log',
+                        action='store_true',
+                        dest='replace_job_id_with_name_server_log',
+                        help='Replace job id with name in server.log')
     args = parser.parse_args()
 
     hbs_log_path = args.hbs_log
@@ -78,6 +82,29 @@ def main():
         for job in jobs:
             print_task(hbs_log_path, job)
 
+    if args.replace_job_id_with_name_server_log:
+        server_log_path = get_server_log_path(hbs_log_path)
+        config = get_config(hbs_log_path)
+        job_id_name_map = get_job_id_name_map(config)
+        with open(server_log_path, 'r') as src_fp, open('server.log', 'w') as dst_fp:
+            for line in src_fp:
+                for job_id in job_id_name_map.keys():
+                    if job_id in line:
+                        line = line.replace(job_id, job_id_name_map[job_id])
+                dst_fp.write(line)
+
+
+def get_server_log_path(hbs_log_path):
+    return os.path.join(hbs_log_path, 'cloud/server/server.log')
+
+
+def get_job_id_name_map(config):
+    job_id_name_map = dict()
+    for j in config['jobs']:
+        if j['_id'] not in job_id_name_map:
+            job_id_name_map[j['_id']] = j['name']
+    return job_id_name_map
+
 
 def print_task(hbs_log_path, job):
     task_counter = count_task(hbs_log_path, job)
@@ -121,7 +148,7 @@ def count_task(hbs_log_path, job):
             for line in fp:
                 if 'task submitted:' not in line:
                     continue
-                task_name = get_taks_name(line)
+                task_name = get_task_name(line)
                 task_counter.update({task_name: 1})
     return task_counter
 
@@ -133,7 +160,7 @@ def get_upload_file_size(hbs_log_path, job):
             for line in fp:
                 if 'task submitted:' not in line:
                     continue
-                task_name = get_taks_name(line)
+                task_name = get_task_name(line)
                 if task_name == 'UploadTask':
                     size = get_upload_size(line)
                     file_sizes.append(size)
@@ -145,7 +172,7 @@ def get_upload_size(line):
     return size
 
 
-def get_taks_name(line):
+def get_task_name(line):
     start = line.find('task submitted: ') + len('task submitted: ')
     end = line.find('(')
     return line[start:end]
