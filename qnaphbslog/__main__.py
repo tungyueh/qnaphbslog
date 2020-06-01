@@ -183,7 +183,7 @@ def get_hbs_version(hbs_log_path):
     with open(qpkg_conf_path, 'r') as fp:
         hbs_section = False
         for line in fp:
-            if 'HybridBackup' in line:
+            if '[HybridBackup]' in line:
                 hbs_section = True
             if hbs_section and 'Version' in line:
                 hbs_version = line.split()[-1]
